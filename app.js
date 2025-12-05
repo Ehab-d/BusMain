@@ -3,15 +3,16 @@
     const VIEW_STORAGE_KEY = "busViewMode";
 
     const DEFAULT_BUSES = [
-        { number: 9826, oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9827, oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9712, oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9715, oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9714, oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9687, oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" }
+        { number: 9826, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
+        { number: 9827, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
+        { number: 9712, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
+        { number: 9715, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
+        { number: 9714, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
+        { number: 9687, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" }
     ];
 
     let buses = [];
+    let drivers = ["أمير سامي"]; // قائمة السائقين المتاحة
     let editingIndex = null;
     let currentView = "table"; // "table" أو "cards"
 
@@ -32,6 +33,7 @@
     const busForm = document.getElementById("busForm");
 
     const busNumberInput = document.getElementById("busNumber");
+    const driverNameSelect = document.getElementById("driverName");
     const oilCounterInput = document.getElementById("oilCounter");
     const oilChangeDateInput = document.getElementById("oilChangeDate");
     const tiresInput = document.getElementById("tires");
@@ -51,7 +53,17 @@
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
-                buses = JSON.parse(stored);
+                const parsed = JSON.parse(stored);
+                // ضمان وجود driverName حتى لو كانت بيانات قديمة
+                buses = parsed.map((b) => ({
+                    number: b.number,
+                    driverName: b.driverName || "أمير سامي",
+                    oilCounter: b.oilCounter || "",
+                    oilChangeDate: b.oilChangeDate || "",
+                    tires: b.tires || "",
+                    repairs: b.repairs || "",
+                    notes: b.notes || "",
+                }));
             } else {
                 buses = DEFAULT_BUSES;
                 saveData();
@@ -59,6 +71,24 @@
         } catch (e) {
             buses = DEFAULT_BUSES;
         }
+    }
+
+    function ensureDriversFromBuses() {
+        const names = new Set(drivers);
+        buses.forEach((b) => {
+            if (b.driverName) names.add(b.driverName);
+        });
+        drivers = Array.from(names);
+    }
+
+    function renderDriverOptions() {
+        driverNameSelect.innerHTML = "";
+        drivers.forEach((name) => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            driverNameSelect.appendChild(opt);
+        });
     }
 
     function saveData() {
@@ -90,6 +120,7 @@
 
             tr.innerHTML = `
                 <td>${bus.number}</td>
+                <td>${bus.driverName || "-"}</td>
                 <td>${bus.oilCounter || "-"}</td>
                 <td>${bus.oilChangeDate || "-"}</td>
                 <td>${bus.tires || "-"}</td>
@@ -126,8 +157,11 @@
             card.className = "bus-card";
             card.innerHTML = `
                 <header class="bus-card__header">
-                    <span class="bus-card__label">رقم السيارة</span>
-                    <span class="bus-card__number">${bus.number}</span>
+                    <div>
+                        <span class="bus-card__label">رقم السيارة</span>
+                        <span class="bus-card__number">${bus.number}</span>
+                    </div>
+                    <div class="bus-card__driver">${bus.driverName || "بدون سائق"}</div>
                 </header>
                 <div class="bus-card__body">
                     <div class="bus-card__row"><span>عداد الزيت:</span><span>${bus.oilCounter || "-"}</span></div>
@@ -181,6 +215,7 @@
 
     function fillForm(bus) {
         busNumberInput.value = bus.number;
+        driverNameSelect.value = bus.driverName || drivers[0] || "";
         oilCounterInput.value = bus.oilCounter || "";
         oilChangeDateInput.value = bus.oilChangeDate || "";
         tiresInput.value = bus.tires || "";
@@ -196,6 +231,7 @@
 
         const busData = {
             number: Number(busNumberInput.value),
+            driverName: driverNameSelect.value || "",
             oilCounter: oilCounterInput.value || "",
             oilChangeDate: oilChangeDateInput.value || "",
             tires: tiresInput.value || "",
@@ -252,6 +288,7 @@
                     .filter((item) => item && typeof item.number !== "undefined")
                     .map((item) => ({
                         number: Number(item.number),
+                        driverName: item.driverName || "أمير سامي",
                         oilCounter: item.oilCounter || "",
                         oilChangeDate: item.oilChangeDate || "",
                         tires: item.tires || "",
@@ -362,6 +399,19 @@
             closeModal();
         });
 
+        const addDriverBtn = document.getElementById("addDriverBtn");
+        addDriverBtn.addEventListener("click", () => {
+            const name = prompt("أدخل اسم السائق الجديد:");
+            if (!name) return;
+            const trimmed = name.trim();
+            if (!trimmed) return;
+            if (!drivers.includes(trimmed)) {
+                drivers.push(trimmed);
+                renderDriverOptions();
+            }
+            driverNameSelect.value = trimmed;
+        });
+
         busModal.addEventListener("click", (e) => {
             if (e.target === busModal.querySelector(".modal-backdrop")) {
                 closeModal();
@@ -414,6 +464,8 @@
 
     function init() {
         loadData();
+        ensureDriversFromBuses();
+        renderDriverOptions();
 
         let savedView = "cards";
         try {
