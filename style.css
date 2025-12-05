@@ -4,6 +4,16 @@
     box-sizing: border-box;
 }
 
+.driver-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.driver-row select {
+    flex: 1;
+}
+
 :root {
     /* ألوان مستوحاة من Material You (فاتحة وباستيل) */
     --primary: #4f8cff;
@@ -349,7 +359,8 @@ label {
 }
 
 input,
-textarea {
+textarea,
+select {
     border-radius: 0.75rem;
     border: 1px solid var(--border);
     padding: 0.55rem 0.7rem;
@@ -361,7 +372,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
 }
