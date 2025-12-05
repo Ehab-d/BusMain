@@ -52,6 +52,7 @@
                 <thead>
                     <tr>
                         <th>رقم السيارة</th>
+                        <th>اسم مستعمل المركبة</th>
                         <th>عداد الزيت</th>
                         <th>ميعاد تغييره</th>
                         <th>إطارات</th>
@@ -97,6 +98,16 @@
                 <div class="form-group">
                     <label for="busNumber">رقم السيارة</label>
                     <input type="number" id="busNumber" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="driverName">اسم مستعمل المركبة</label>
+                    <div class="driver-row">
+                        <select id="driverName"></select>
+                        <button type="button" id="addDriverBtn" class="btn btn-sm secondary">
+                            + إضافة سائق
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
