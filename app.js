@@ -24,7 +24,8 @@
     const emptyStateCards = document.getElementById("emptyStateCards");
 
     const searchInput = document.getElementById("searchInput");
-    const viewSelect = document.getElementById("viewSelect");
+    const viewMenuBtn = document.getElementById("viewMenuBtn");
+    const viewMenu = document.getElementById("viewMenu");
 
     const busModal = document.getElementById("busModal");
     const modalTitle = document.getElementById("modalTitle");
@@ -38,6 +39,10 @@
     const notesInput = document.getElementById("notes");
 
     const addBusBtn = document.getElementById("addBusBtn");
+    const dataMenuBtn = document.getElementById("dataMenuBtn");
+    const dataMenu = document.getElementById("dataMenu");
+    const exportBtn = document.getElementById("exportBtn");
+    const importInput = document.getElementById("importInput");
     const saveBusBtn = document.getElementById("saveBusBtn");
     const clearFormBtn = document.getElementById("clearFormBtn");
     const closeModalBtn = document.getElementById("closeModalBtn");
@@ -91,8 +96,14 @@
                 <td>${bus.repairs || "-"}</td>
                 <td>${bus.notes || "-"}</td>
                 <td class="actions-cell">
-                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.number}">تعديل</button>
-                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.number}">حذف</button>
+                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.number}">
+                        <span class="icon icon-edit" aria-hidden="true"></span>
+                        <span>تعديل</span>
+                    </button>
+                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.number}">
+                        <span class="icon icon-delete" aria-hidden="true"></span>
+                        <span>حذف</span>
+                    </button>
                 </td>
             `;
 
@@ -126,8 +137,14 @@
                     <div class="bus-card__row bus-card__notes"><span>ملاحظات:</span><span>${bus.notes || "-"}</span></div>
                 </div>
                 <footer class="bus-card__footer actions-cell">
-                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.number}">تعديل</button>
-                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.number}">حذف</button>
+                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.number}">
+                        <span class="icon icon-edit" aria-hidden="true"></span>
+                        <span>تعديل</span>
+                    </button>
+                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.number}">
+                        <span class="icon icon-delete" aria-hidden="true"></span>
+                        <span>حذف</span>
+                    </button>
                 </footer>
             `;
             busCards.appendChild(card);
@@ -203,6 +220,66 @@
         saveData();
         render(searchInput.value);
         closeModal();
+    }
+
+    function exportData() {
+        const dataStr = JSON.stringify(buses, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "buses-data.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function importDataFromFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (!Array.isArray(parsed)) {
+                    alert("ملف غير صالح: يجب أن يحتوي على قائمة سيارات.");
+                    return;
+                }
+
+                const normalized = parsed
+                    .filter((item) => item && typeof item.number !== "undefined")
+                    .map((item) => ({
+                        number: Number(item.number),
+                        oilCounter: item.oilCounter || "",
+                        oilChangeDate: item.oilChangeDate || "",
+                        tires: item.tires || "",
+                        repairs: item.repairs || "",
+                        notes: item.notes || "",
+                    }));
+
+                if (!normalized.length) {
+                    alert("الملف لا يحتوي على بيانات صالحة.");
+                    return;
+                }
+
+                if (!confirm("سيتم استبدال البيانات الحالية بالبيانات المستوردة، هل أنت متأكد؟")) {
+                    return;
+                }
+
+                buses = normalized;
+                saveData();
+                render(searchInput.value);
+                alert("تم استيراد البيانات بنجاح.");
+            } catch (err) {
+                alert("حدث خطأ أثناء قراءة الملف، تأكد أنه ملف JSON صالح.");
+            } finally {
+                importInput.value = "";
+            }
+        };
+
+        reader.readAsText(file, "utf-8");
     }
 
     function handleRowAction(e) {
@@ -298,8 +375,40 @@
         busTableBody.addEventListener("click", handleRowAction);
         busCards.addEventListener("click", handleCardAction);
 
-        viewSelect.addEventListener("change", () => {
-            switchView(viewSelect.value === "cards" ? "cards" : "table");
+        viewMenuBtn.addEventListener("click", () => {
+            viewMenu.classList.toggle("hidden");
+        });
+
+        dataMenuBtn.addEventListener("click", () => {
+            dataMenu.classList.toggle("hidden");
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!dataMenu.contains(e.target) && !dataMenuBtn.contains(e.target)) {
+                dataMenu.classList.add("hidden");
+            }
+            if (!viewMenu.contains(e.target) && !viewMenuBtn.contains(e.target)) {
+                viewMenu.classList.add("hidden");
+            }
+        });
+
+        exportBtn.addEventListener("click", () => {
+            exportData();
+            dataMenu.classList.add("hidden");
+        });
+
+        importInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            importDataFromFile(file);
+            dataMenu.classList.add("hidden");
+        });
+
+        viewMenu.addEventListener("click", (e) => {
+            const btn = e.target.closest(".data-menu-item[data-view]");
+            if (!btn) return;
+            const view = btn.dataset.view === "table" ? "table" : "cards";
+            switchView(view);
+            viewMenu.classList.add("hidden");
         });
     }
 
@@ -314,10 +423,6 @@
             }
         } catch (e) {
             savedView = "cards";
-        }
-
-        if (viewSelect) {
-            viewSelect.value = savedView;
         }
 
         switchView(savedView);
