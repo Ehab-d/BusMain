@@ -19,13 +19,31 @@
                 id="searchInput"
                 placeholder="ابحث برقم السيارة..."
             />
-            <select id="viewSelect" class="view-select">
-                <option value="table">عرض جدول</option>
-                <option value="cards" selected>عرض كروت</option>
-            </select>
+            <div class="data-menu-group">
+                <button id="viewMenuBtn" class="btn secondary" type="button" title="تغيير طريقة العرض">
+                    العرض ▾
+                </button>
+                <div id="viewMenu" class="data-menu hidden">
+                    <button type="button" class="data-menu-item" data-view="cards">عرض كروت</button>
+                    <button type="button" class="data-menu-item" data-view="table">عرض جدول</button>
+                </div>
+            </div>
             <button id="addBusBtn" class="btn primary">
                 + إضافة سيارة
             </button>
+
+            <div class="data-menu-group">
+                <button id="dataMenuBtn" class="btn secondary">
+                    البيانات ▾
+                </button>
+                <div id="dataMenu" class="data-menu hidden">
+                    <button id="exportBtn" type="button" class="data-menu-item">تصدير البيانات</button>
+                    <label for="importInput" class="data-menu-item" style="cursor:pointer;">
+                        استيراد البيانات
+                    </label>
+                </div>
+                <input type="file" id="importInput" accept="application/json" style="display:none;" />
+            </div>
         </section>
 
         <section class="table-wrapper" id="tableWrapper">
@@ -59,6 +77,12 @@
             </p>
         </section>
     </main>
+
+    <footer class="app-footer">
+        <span class="footer-name">م. عماد الدين فاروق</span>
+        <span class="footer-role">مشرف سيارات المدرسة المصرية الألمانية للغات</span>
+        <span class="footer-year">© 2026</span>
+    </footer>
 
     <!-- النافذة المنبثقة (المودال) لإضافة / تعديل سيارة -->
     <div id="busModal" class="modal hidden">
