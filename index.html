@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <title>جدول متابعة الباصات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header class="top-bar">
+        <h1>جدول متابعة الباصات</h1>
+    </header>
+
+    <main class="container">
+        <section class="toolbar">
+            <input
+                type="search"
+                id="searchInput"
+                placeholder="ابحث برقم السيارة..."
+            />
+            <select id="viewSelect" class="view-select">
+                <option value="table">عرض جدول</option>
+                <option value="cards" selected>عرض كروت</option>
+            </select>
+            <button id="addBusBtn" class="btn primary">
+                + إضافة سيارة
+            </button>
+        </section>
+
+        <section class="table-wrapper" id="tableWrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>رقم السيارة</th>
+                        <th>عداد الزيت</th>
+                        <th>ميعاد تغييره</th>
+                        <th>إطارات</th>
+                        <th>إصلاحات</th>
+                        <th>ملاحظات</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="busTableBody">
+                    <!-- يتم الملء من JavaScript -->
+                </tbody>
+            </table>
+            <p id="emptyState" class="empty-state" style="display:none;">
+                لا توجد بيانات مطابقة لبحثك.
+            </p>
+        </section>
+
+        <section class="cards-wrapper hidden" id="cardsWrapper">
+            <div id="busCards" class="cards-grid">
+                <!-- يتم الملء من JavaScript -->
+            </div>
+            <p id="emptyStateCards" class="empty-state" style="display:none;">
+                لا توجد بيانات مطابقة لبحثك.
+            </p>
+        </section>
+    </main>
+
+    <!-- النافذة المنبثقة (المودال) لإضافة / تعديل سيارة -->
+    <div id="busModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="modalTitle">إضافة سيارة</h2>
+            </header>
+
+            <form id="busForm" class="modal-body" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="busNumber">رقم السيارة</label>
+                    <input type="number" id="busNumber" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="oilCounter">عداد الزيت</label>
+                    <input type="number" id="oilCounter" />
+                </div>
+
+                <div class="form-group">
+                    <label for="oilChangeDate">ميعاد تغيير الزيت</label>
+                    <input type="date" id="oilChangeDate" />
+                </div>
+
+                <div class="form-group">
+                    <label for="tires">الإطارات</label>
+                    <input type="text" id="tires" placeholder="مثال: جيدة / تحتاج تغيير" />
+                </div>
+
+                <div class="form-group">
+                    <label for="repairs">الإصلاحات</label>
+                    <input type="text" id="repairs" placeholder="مثال: صيانة فرامل" />
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">ملاحظات</label>
+                    <textarea id="notes" rows="2"></textarea>
+                </div>
+            </form>
+
+            <footer class="modal-footer">
+                <button id="clearFormBtn" class="btn secondary">
+                    مسح
+                </button>
+                <button id="closeModalBtn" class="btn ghost">
+                    إغلاق
+                </button>
+                <button id="saveBusBtn" class="btn primary">
+                    حفظ
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
