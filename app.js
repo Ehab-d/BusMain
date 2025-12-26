@@ -1,21 +1,26 @@
 (function () {
-    const STORAGE_KEY = "busTableData";
-    const VIEW_STORAGE_KEY = "busViewMode";
+    // -------------------------------------------------------------------------
+    // 1. إعدادات SUPABASE
+    // -------------------------------------------------------------------------
+    // استبدل القيم التالية ببيانات مشروعك الحقيقية من لوحة تحكم Supabase
+    const SUPABASE_URL = "https://zvqcseapqtfptsvjmsor.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cWNzZWFwcXRmcHRzdmptc29yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjEzNzA1MywiZXhwIjoyMDgxNzEzMDUzfQ._V6o5wEfPjvKFp2olyzg2icilLdWHhSKFZM6Dde_9jA";
+    
+    // تهيئة العميل
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const TABLE_NAME = "buses"; // اسم الجدول في Supabase
 
-    const DEFAULT_BUSES = [
-        { number: 9826, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9827, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9712, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9715, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9714, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" },
-        { number: 9687, driverName: "أمير سامي", oilCounter: "", oilChangeDate: "", tires: "", repairs: "", notes: "" }
-    ];
+    // -------------------------------------------------------------------------
+    // 2. المتغيرات العامة
+    // -------------------------------------------------------------------------
+    const VIEW_STORAGE_KEY = "busViewMode"; // سنحتفظ فقط بنمط العرض في التخزين المحلي لتحسين تجربة المستخدم
 
     let buses = [];
-    let drivers = ["أمير سامي"]; // قائمة السائقين المتاحة
-    let editingIndex = null;
-    let currentView = "table"; // "table" أو "cards"
+    let drivers = ["أمير سامي"]; 
+    let editingId = null; // سنعتمد على ID الخاص بقاعدة البيانات بدلاً من Index المصفوفة
+    let currentView = "table"; 
 
+    // عناصر DOM
     const busTableBody = document.getElementById("busTableBody");
     const emptyState = document.getElementById("emptyState");
     const tableWrapper = document.getElementById("tableWrapper");
@@ -49,27 +54,58 @@
     const clearFormBtn = document.getElementById("clearFormBtn");
     const closeModalBtn = document.getElementById("closeModalBtn");
 
-    function loadData() {
+    // -------------------------------------------------------------------------
+    // 3. دوال التعامل مع البيانات (Supabase)
+    // -------------------------------------------------------------------------
+
+    // دالة لتحويل بيانات Supabase (snake_case) إلى كائنات التطبيق (camelCase)
+    function mapFromSupabase(record) {
+        return {
+            id: record.id, // Primary Key
+            number: record.number,
+            driverName: record.driver_name,
+            oilCounter: record.oil_counter,
+            oilChangeDate: record.oil_change_date,
+            tires: record.tires,
+            repairs: record.repairs,
+            notes: record.notes
+        };
+    }
+
+    // دالة لتحويل كائنات التطبيق إلى بيانات Supabase
+    function mapToSupabase(bus) {
+        return {
+            number: bus.number,
+            driver_name: bus.driverName,
+            oil_counter: bus.oilCounter,
+            oil_change_date: bus.oilChangeDate,
+            tires: bus.tires,
+            repairs: bus.repairs,
+            notes: bus.notes
+        };
+    }
+
+    async function loadData() {
         try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                // ضمان وجود driverName حتى لو كانت بيانات قديمة
-                buses = parsed.map((b) => ({
-                    number: b.number,
-                    driverName: b.driverName || "أمير سامي",
-                    oilCounter: b.oilCounter || "",
-                    oilChangeDate: b.oilChangeDate || "",
-                    tires: b.tires || "",
-                    repairs: b.repairs || "",
-                    notes: b.notes || "",
-                }));
-            } else {
-                buses = DEFAULT_BUSES;
-                saveData();
+            // إظهار حالة التحميل (اختياري)
+            // busTableBody.innerHTML = '<tr><td colspan="8">جاري التحميل...</td></tr>';
+
+            const { data, error } = await supabase
+                .from(TABLE_NAME)
+                .select('*')
+                .order('number', { ascending: true });
+
+            if (error) throw error;
+
+            if (data) {
+                buses = data.map(mapFromSupabase);
+                ensureDriversFromBuses();
+                renderDriverOptions();
+                render(searchInput.value);
             }
-        } catch (e) {
-            buses = DEFAULT_BUSES;
+        } catch (error) {
+            console.error("خطأ في جلب البيانات:", error.message);
+            alert("حدث خطأ أثناء الاتصال بقاعدة البيانات.");
         }
     }
 
@@ -82,6 +118,9 @@
     }
 
     function renderDriverOptions() {
+        // حفظ القيمة المختارة حالياً لإعادة تعيينها إذا لم تتغير
+        const currentSelection = driverNameSelect.value;
+        
         driverNameSelect.innerHTML = "";
         drivers.forEach((name) => {
             const opt = document.createElement("option");
@@ -89,14 +128,8 @@
             opt.textContent = name;
             driverNameSelect.appendChild(opt);
         });
-    }
 
-    function saveData() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(buses));
-        } catch (e) {
-            console.error("تعذر حفظ البيانات في التخزين المحلي", e);
-        }
+        if (currentSelection) driverNameSelect.value = currentSelection;
     }
 
     function filterBuses(filterValue = "") {
@@ -104,6 +137,10 @@
         if (!value) return buses;
         return buses.filter((b) => String(b.number).includes(value));
     }
+
+    // -------------------------------------------------------------------------
+    // 4. دوال العرض (Rendering)
+    // -------------------------------------------------------------------------
 
     function renderTable(filterValue = "") {
         const filtered = filterBuses(filterValue);
@@ -117,7 +154,7 @@
 
         filtered.forEach((bus) => {
             const tr = document.createElement("tr");
-
+            // نستخدم bus.id للتعريف بدلاً من الرقم فقط لضمان الدقة
             tr.innerHTML = `
                 <td>${bus.number}</td>
                 <td>${bus.driverName || "-"}</td>
@@ -127,17 +164,16 @@
                 <td>${bus.repairs || "-"}</td>
                 <td>${bus.notes || "-"}</td>
                 <td class="actions-cell">
-                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.number}">
+                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.id}">
                         <span class="icon icon-edit" aria-hidden="true"></span>
                         <span>تعديل</span>
                     </button>
-                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.number}">
+                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.id}">
                         <span class="icon icon-delete" aria-hidden="true"></span>
                         <span>حذف</span>
                     </button>
                 </td>
             `;
-
             busTableBody.appendChild(tr);
         });
     }
@@ -171,11 +207,11 @@
                     <div class="bus-card__row bus-card__notes"><span>ملاحظات:</span><span>${bus.notes || "-"}</span></div>
                 </div>
                 <footer class="bus-card__footer actions-cell">
-                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.number}">
+                    <button class="btn btn-sm secondary" data-action="edit" data-id="${bus.id}">
                         <span class="icon icon-edit" aria-hidden="true"></span>
                         <span>تعديل</span>
                     </button>
-                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.number}">
+                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${bus.id}">
                         <span class="icon icon-delete" aria-hidden="true"></span>
                         <span>حذف</span>
                     </button>
@@ -193,6 +229,10 @@
         }
     }
 
+    // -------------------------------------------------------------------------
+    // 5. إدارة المودال والنموذج
+    // -------------------------------------------------------------------------
+
     function openModal(mode, bus) {
         busModal.classList.remove("hidden");
         if (mode === "edit") {
@@ -206,16 +246,18 @@
 
     function closeModal() {
         busModal.classList.add("hidden");
-        editingIndex = null;
+        editingId = null;
     }
 
     function clearForm() {
         busForm.reset();
+        // إعادة تعيين السائق الافتراضي إذا وجد
+        if (drivers.length > 0) driverNameSelect.value = drivers[0];
     }
 
     function fillForm(bus) {
         busNumberInput.value = bus.number;
-        driverNameSelect.value = bus.driverName || drivers[0] || "";
+        driverNameSelect.value = bus.driverName || (drivers[0] || "");
         oilCounterInput.value = bus.oilCounter || "";
         oilChangeDateInput.value = bus.oilChangeDate || "";
         tiresInput.value = bus.tires || "";
@@ -223,13 +265,21 @@
         notesInput.value = bus.notes || "";
     }
 
-    function handleSave() {
+    // -------------------------------------------------------------------------
+    // 6. التعامل مع الحفظ (Insert/Update)
+    // -------------------------------------------------------------------------
+
+    async function handleSave() {
         if (!busNumberInput.value) {
             alert("رقم السيارة مطلوب");
             return;
         }
 
-        const busData = {
+        saveBusBtn.disabled = true;
+        saveBusBtn.textContent = "جاري الحفظ...";
+
+        // تجهيز الكائن (JS format)
+        const busDataJS = {
             number: Number(busNumberInput.value),
             driverName: driverNameSelect.value || "",
             oilCounter: oilCounterInput.value || "",
@@ -239,33 +289,66 @@
             notes: notesInput.value || "",
         };
 
-        const existingIndex = buses.findIndex(
-            (b, index) => b.number === busData.number && index !== editingIndex
-        );
-        if (existingIndex !== -1) {
-            const overwrite = confirm("يوجد سجل بنفس رقم السيارة، هل تريد استبداله؟");
-            if (!overwrite) return;
-        }
+        // تحويله لـ Supabase format
+        const payload = mapToSupabase(busDataJS);
 
-        if (editingIndex !== null) {
-            buses[editingIndex] = busData;
-        } else {
-            buses.push(busData);
-        }
+        try {
+            if (editingId) {
+                // --- تحديث (Update) ---
+                const { error } = await supabase
+                    .from(TABLE_NAME)
+                    .update(payload)
+                    .eq('id', editingId);
 
-        saveData();
-        render(searchInput.value);
-        closeModal();
+                if (error) throw error;
+
+            } else {
+                // --- إضافة جديد (Insert) ---
+                // تحقق اختياري: هل الرقم موجود مسبقاً؟
+                // (يمكنك الاعتماد على Supabase unique constraint إذا قمت بضبطها)
+                const existing = buses.find(b => b.number === busDataJS.number);
+                if (existing) {
+                    const confirmOverwrite = confirm("يوجد سيارة بنفس الرقم، هل تريد المتابعة وإضافة سجل جديد بنفس الرقم؟");
+                    if (!confirmOverwrite) {
+                         saveBusBtn.disabled = false;
+                         saveBusBtn.textContent = "حفظ";
+                         return;
+                    }
+                }
+
+                const { error } = await supabase
+                    .from(TABLE_NAME)
+                    .insert([payload]);
+
+                if (error) throw error;
+            }
+
+            // إعادة تحميل البيانات وتحديث الواجهة
+            await loadData();
+            closeModal();
+
+        } catch (err) {
+            console.error(err);
+            alert("حدث خطأ أثناء حفظ البيانات: " + err.message);
+        } finally {
+            saveBusBtn.disabled = false;
+            saveBusBtn.textContent = "حفظ";
+        }
     }
 
+    // -------------------------------------------------------------------------
+    // 7. الاستيراد والتصدير
+    // -------------------------------------------------------------------------
+
     function exportData() {
+        // التصدير يعتمد على البيانات المحملة محلياً في buses
         const dataStr = JSON.stringify(buses, null, 2);
         const blob = new Blob([dataStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = "buses-data.json";
+        a.download = "buses-data-supabase.json";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -276,7 +359,7 @@
         if (!file) return;
         const reader = new FileReader();
 
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const parsed = JSON.parse(e.target.result);
                 if (!Array.isArray(parsed)) {
@@ -284,33 +367,43 @@
                     return;
                 }
 
-                const normalized = parsed
+                if (!confirm("سيتم إضافة البيانات المستوردة إلى قاعدة البيانات. هل أنت متأكد؟")) {
+                    importInput.value = "";
+                    return;
+                }
+
+                // تجهيز البيانات للإرسال
+                const rowsToInsert = parsed
                     .filter((item) => item && typeof item.number !== "undefined")
                     .map((item) => ({
+                        // Mapping from JS Import Format -> Supabase Column Format
                         number: Number(item.number),
-                        driverName: item.driverName || "أمير سامي",
-                        oilCounter: item.oilCounter || "",
-                        oilChangeDate: item.oilChangeDate || "",
+                        driver_name: item.driverName || "أمير سامي",
+                        oil_counter: item.oilCounter || "",
+                        oil_change_date: item.oilChangeDate || "",
                         tires: item.tires || "",
                         repairs: item.repairs || "",
-                        notes: item.notes || "",
+                        notes: item.notes || ""
                     }));
 
-                if (!normalized.length) {
-                    alert("الملف لا يحتوي على بيانات صالحة.");
+                if (!rowsToInsert.length) {
+                    alert("لا توجد بيانات صالحة للاستيراد.");
                     return;
                 }
 
-                if (!confirm("سيتم استبدال البيانات الحالية بالبيانات المستوردة، هل أنت متأكد؟")) {
-                    return;
-                }
+                // إرسال البيانات دفعة واحدة (Bulk Insert)
+                const { error } = await supabase
+                    .from(TABLE_NAME)
+                    .insert(rowsToInsert);
 
-                buses = normalized;
-                saveData();
-                render(searchInput.value);
+                if (error) throw error;
+
                 alert("تم استيراد البيانات بنجاح.");
+                await loadData();
+
             } catch (err) {
-                alert("حدث خطأ أثناء قراءة الملف، تأكد أنه ملف JSON صالح.");
+                console.error(err);
+                alert("حدث خطأ أثناء الاستيراد: " + err.message);
             } finally {
                 importInput.value = "";
             }
@@ -319,47 +412,48 @@
         reader.readAsText(file, "utf-8");
     }
 
-    function handleRowAction(e) {
+    // -------------------------------------------------------------------------
+    // 8. التعامل مع الأزرار داخل الجدول/البطاقات
+    // -------------------------------------------------------------------------
+
+    async function handleAction(e) {
         const btn = e.target.closest("button[data-action]");
         if (!btn) return;
 
         const action = btn.dataset.action;
-        const id = Number(btn.dataset.id);
-        const index = buses.findIndex((b) => b.number === id);
-        if (index === -1) return;
+        // هنا الـ id هو المعرف الحقيقي من قاعدة البيانات (int8)
+        const id = Number(btn.dataset.id); 
+        
+        // البحث عن السيارة في المصفوفة المحلية للتأكد والتحضير
+        const bus = buses.find((b) => b.id === id);
+        if (!bus) return;
 
         if (action === "edit") {
-            editingIndex = index;
-            openModal("edit", buses[index]);
+            editingId = id; // تخزين الـ ID للتعديل
+            openModal("edit", bus);
         } else if (action === "delete") {
-            const sure = confirm("هل أنت متأكد من حذف هذه السيارة؟");
+            const sure = confirm(`هل أنت متأكد من حذف السيارة رقم ${bus.number}؟`);
             if (!sure) return;
-            buses.splice(index, 1);
-            saveData();
-            render(searchInput.value);
+
+            try {
+                const { error } = await supabase
+                    .from(TABLE_NAME)
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                
+                await loadData(); // تحديث القائمة
+
+            } catch (err) {
+                alert("فشل الحذف: " + err.message);
+            }
         }
     }
 
-    function handleCardAction(e) {
-        const btn = e.target.closest("button[data-action]");
-        if (!btn) return;
-
-        const action = btn.dataset.action;
-        const id = Number(btn.dataset.id);
-        const index = buses.findIndex((b) => b.number === id);
-        if (index === -1) return;
-
-        if (action === "edit") {
-            editingIndex = index;
-            openModal("edit", buses[index]);
-        } else if (action === "delete") {
-            const sure = confirm("هل أنت متأكد من حذف هذه السيارة؟");
-            if (!sure) return;
-            buses.splice(index, 1);
-            saveData();
-            render(searchInput.value);
-        }
-    }
+    // -------------------------------------------------------------------------
+    // 9. تبديل العرض (View Switching)
+    // -------------------------------------------------------------------------
 
     function switchView(view) {
         currentView = view === "cards" ? "cards" : "table";
@@ -373,17 +467,20 @@
         }
 
         try {
+            // سنبقي تفضيل العرض محلياً لأنه يخص واجهة المستخدم وليس البيانات
             localStorage.setItem(VIEW_STORAGE_KEY, currentView);
-        } catch (e) {
-            // تجاهل أخطاء التخزين
-        }
+        } catch (e) {}
 
         render(searchInput.value);
     }
 
+    // -------------------------------------------------------------------------
+    // 10. تهيئة الأحداث (Event Listeners)
+    // -------------------------------------------------------------------------
+
     function initEvents() {
         addBusBtn.addEventListener("click", () => {
-            editingIndex = null;
+            editingId = null;
             openModal("add");
         });
 
@@ -400,17 +497,21 @@
         });
 
         const addDriverBtn = document.getElementById("addDriverBtn");
-        addDriverBtn.addEventListener("click", () => {
-            const name = prompt("أدخل اسم السائق الجديد:");
-            if (!name) return;
-            const trimmed = name.trim();
-            if (!trimmed) return;
-            if (!drivers.includes(trimmed)) {
-                drivers.push(trimmed);
-                renderDriverOptions();
-            }
-            driverNameSelect.value = trimmed;
-        });
+        if(addDriverBtn) { // التأكد من وجود الزر
+            addDriverBtn.addEventListener("click", () => {
+                const name = prompt("أدخل اسم السائق الجديد:");
+                if (!name) return;
+                const trimmed = name.trim();
+                if (!trimmed) return;
+                
+                // إضافة للقائمة المحلية والواجهة فقط (سيتم حفظها مع السيارة في DB)
+                if (!drivers.includes(trimmed)) {
+                    drivers.push(trimmed);
+                    renderDriverOptions();
+                }
+                driverNameSelect.value = trimmed;
+            });
+        }
 
         busModal.addEventListener("click", (e) => {
             if (e.target === busModal.querySelector(".modal-backdrop")) {
@@ -422,8 +523,9 @@
             render(searchInput.value);
         });
 
-        busTableBody.addEventListener("click", handleRowAction);
-        busCards.addEventListener("click", handleCardAction);
+        // دمج معالج الجدول والبطاقات لأنهما يستخدمان نفس المنطق والـ ID
+        busTableBody.addEventListener("click", handleAction);
+        busCards.addEventListener("click", handleAction);
 
         viewMenuBtn.addEventListener("click", () => {
             viewMenu.classList.toggle("hidden");
@@ -462,11 +564,12 @@
         });
     }
 
-    function init() {
-        loadData();
-        ensureDriversFromBuses();
-        renderDriverOptions();
+    // -------------------------------------------------------------------------
+    // 11. التشغيل المبدئي
+    // -------------------------------------------------------------------------
 
+    function init() {
+        // استعادة وضع العرض المفضل
         let savedView = "cards";
         try {
             const storedView = localStorage.getItem(VIEW_STORAGE_KEY);
@@ -479,6 +582,9 @@
 
         switchView(savedView);
         initEvents();
+        
+        // جلب البيانات من السيرفر
+        loadData();
     }
 
     document.addEventListener("DOMContentLoaded", init);
