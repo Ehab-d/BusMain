@@ -16,7 +16,7 @@
     const VIEW_STORAGE_KEY = "busViewMode"; // سنحتفظ فقط بنمط العرض في التخزين المحلي لتحسين تجربة المستخدم
 
     let buses = [];
-    let drivers = ["أمير سامي"]; 
+    let drivers = [];
     let editingId = null; // سنعتمد على ID الخاص بقاعدة البيانات بدلاً من Index المصفوفة
     let currentView = "table"; 
 
@@ -378,7 +378,7 @@
                     .map((item) => ({
                         // Mapping from JS Import Format -> Supabase Column Format
                         number: Number(item.number),
-                        driver_name: item.driverName || "أمير سامي",
+                        driver_name: item.driverName || "",
                         oil_counter: item.oilCounter || "",
                         oil_change_date: item.oilChangeDate || "",
                         tires: item.tires || "",
@@ -589,3 +589,4 @@
 
     document.addEventListener("DOMContentLoaded", init);
 })();
+
