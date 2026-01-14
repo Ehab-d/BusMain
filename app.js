@@ -40,6 +40,7 @@
     const busNumberInput = document.getElementById("busNumber");
     const driverNameSelect = document.getElementById("driverName");
     const oilCounterInput = document.getElementById("oilCounter");
+    const nextOilCounterInput = document.getElementById("nextOilCounter");
     const oilChangeDateInput = document.getElementById("oilChangeDate");
     const tiresInput = document.getElementById("tires");
     const repairsInput = document.getElementById("repairs");
@@ -65,6 +66,7 @@
             number: record.number,
             driverName: record.driver_name,
             oilCounter: record.oil_counter,
+            nextOilCounter: record.next_oil_counter,
             oilChangeDate: record.oil_change_date,
             tires: record.tires,
             repairs: record.repairs,
@@ -78,6 +80,7 @@
             number: bus.number,
             driver_name: bus.driverName,
             oil_counter: bus.oilCounter,
+            next_oil_counter: bus.nextOilCounter,
             oil_change_date: bus.oilChangeDate,
             tires: bus.tires,
             repairs: bus.repairs,
@@ -159,6 +162,7 @@
                 <td>${bus.number}</td>
                 <td>${bus.driverName || "-"}</td>
                 <td>${bus.oilCounter || "-"}</td>
+                <td>${bus.nextOilCounter || "-"}</td>
                 <td>${bus.oilChangeDate || "-"}</td>
                 <td>${bus.tires || "-"}</td>
                 <td>${bus.repairs || "-"}</td>
@@ -201,6 +205,7 @@
                 </header>
                 <div class="bus-card__body">
                     <div class="bus-card__row"><span>عداد الزيت:</span><span>${bus.oilCounter || "-"}</span></div>
+                    <div class="bus-card__row"><span>عداد الزيت القادم:</span><span>${bus.nextOilCounter || "-"}</span></div>
                     <div class="bus-card__row"><span>ميعاد التغيير:</span><span>${bus.oilChangeDate || "-"}</span></div>
                     <div class="bus-card__row"><span>الإطارات:</span><span>${bus.tires || "-"}</span></div>
                     <div class="bus-card__row"><span>الإصلاحات:</span><span>${bus.repairs || "-"}</span></div>
@@ -259,6 +264,7 @@
         busNumberInput.value = bus.number;
         driverNameSelect.value = bus.driverName || (drivers[0] || "");
         oilCounterInput.value = bus.oilCounter || "";
+        nextOilCounterInput.value = bus.nextOilCounter || "";
         oilChangeDateInput.value = bus.oilChangeDate || "";
         tiresInput.value = bus.tires || "";
         repairsInput.value = bus.repairs || "";
@@ -283,6 +289,7 @@
             number: Number(busNumberInput.value),
             driverName: driverNameSelect.value || "",
             oilCounter: oilCounterInput.value || "",
+            nextOilCounter: nextOilCounterInput.value || "",
             oilChangeDate: oilChangeDateInput.value || "",
             tires: tiresInput.value || "",
             repairs: repairsInput.value || "",
@@ -380,6 +387,7 @@
                         number: Number(item.number),
                         driver_name: item.driverName || "",
                         oil_counter: item.oilCounter || "",
+                        next_oil_counter: item.nextOilCounter || "",
                         oil_change_date: item.oilChangeDate || "",
                         tires: item.tires || "",
                         repairs: item.repairs || "",
